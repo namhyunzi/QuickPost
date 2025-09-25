@@ -6,12 +6,12 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, MessageSquareText, ShieldCheck, Eye, Printer, LockKeyhole } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getDeliveryRequestById, updateDeliveryRequestStatus } from "@/lib/firebase-realtime"
 import { DeliveryRequest } from "@/lib/firebase-realtime"
 
-export default function ShippingDetailPage() {
+function DetailContent() {
   const [deliveryRequest, setDeliveryRequest] = useState<DeliveryRequest | null>(null)
   const [personalInfo, setPersonalInfo] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -250,5 +250,13 @@ export default function ShippingDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ShippingDetailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">로딩중...</div>}>
+      <DetailContent />
+    </Suspense>
   )
 }
