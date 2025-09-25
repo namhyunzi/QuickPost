@@ -6,29 +6,40 @@ import { Input } from "@/components/ui/input"
 import { Search, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useEffect, useState } from "react"
+import { listenToDeliveryRequests, DeliveryRequest } from "@/lib/firebase-realtime"
 
 export default function HomePage() {
-  // 샘플 운송 요청 데이터
-  const shippingRequests = [
-    {
-      id: "ORD-2024-001",
-      store: "스마트 온라인몰",
-      date: "2024-01-15",
-      items: "무선 이어폰, 핸드폰 케이스"
-    },
-    {
-      id: "ORD-2024-002", 
-      store: "패션 플러스",
-      date: "2024-01-14",
-      items: "원피스, 구두"
-    },
-    {
-      id: "ORD-2024-003",
-      store: "생활용품 마트", 
-      date: "2024-01-13",
-      items: "세제, 화장지, 샴푸"
+  const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+
+  useEffect(() => {
+    // 실시간 데이터 리스너 등록
+    const unsubscribe = listenToDeliveryRequests((requests) => {
+      setDeliveryRequests(requests)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  // 검색 필터링
+  const filteredRequests = deliveryRequests.filter(request =>
+    request.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.mallName.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <span className="text-yellow-600 font-medium">송장출력대기</span>
+      case 'processing':
+        return <span className="text-blue-600 font-medium">송장출력중</span>
+      case 'completed':
+        return <span className="text-green-600 font-medium">처리완료</span>
+      default:
+        return <span className="text-gray-600 font-medium">{status}</span>
     }
-  ]
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'rgb(249, 250, 251)' }}>
@@ -50,6 +61,8 @@ export default function HomePage() {
               <Input 
                 placeholder="주문번호, 쇼핑몰로 검색..."
                 className="pl-10 pr-4 py-4 text-lg rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -58,22 +71,25 @@ export default function HomePage() {
 
       {/* 메인 콘텐츠 */}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">운송 요청 (3건)</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          운송 요청 ({filteredRequests.length}건)
+        </h2>
         
         <div>
-          {shippingRequests.map((request, index) => (
-            <Link key={request.id} href="/detail" className="block mb-6">
+          {filteredRequests.map((request) => (
+            <Link key={request.id} href={`/detail?id=${request.id}`} className="block mb-6">
               <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="mb-2">
-                      <span className="font-bold text-lg text-gray-900">{request.id}</span>
+                      <span className="font-bold text-lg text-gray-900">{request.orderNumber}</span>
+                      <span className="ml-3">{getStatusBadge(request.status)}</span>
                     </div>
                     <div className="mb-1">
-                      <span className="text-gray-600">{request.store} • {request.date}</span>
+                      <span className="text-gray-600">{request.mallName} • {new Date(request.requestDate).toLocaleDateString()}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">상품: {request.items}</span>
+                      <span className="text-gray-600">상품: {request.items.map(item => item.title).join(', ')}</span>
                     </div>
                   </div>
                   <ArrowRight className="w-6 h-6 text-gray-400" />

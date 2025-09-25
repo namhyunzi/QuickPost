@@ -415,3 +415,121 @@ export const processBankTransferOrder = async (
   }
 }
 
+// 배송 요청 인터페이스
+export interface DeliveryRequest {
+  id?: string
+  orderNumber: string
+  mallName: string
+  requestDate: string
+  totalAmount: string
+  items: Array<{
+    title: string
+    quantity: number
+    price: string
+  }>
+  deliveryMemo: string
+  ssdmJWT: string
+  status: 'pending' | 'processing' | 'completed'
+  createdAt: string
+  updatedAt: string
+}
+
+// 배송 요청 생성
+export const createDeliveryRequest = async (requestData: Omit<DeliveryRequest, 'id' | 'createdAt' | 'updatedAt'>) => {
+  try {
+    const requestsRef = ref(realtimeDb, 'delivery-requests')
+    const newRequestRef = push(requestsRef)
+    
+    const request: DeliveryRequest = {
+      ...requestData,
+      id: newRequestRef.key!,
+      status: 'pending', // 항상 pending으로 시작
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    await set(newRequestRef, request)
+    return { success: true, requestId: request.id }
+  } catch (error) {
+    console.error('배송 요청 생성 에러:', error)
+    return { success: false, error }
+  }
+}
+
+// 배송 요청 목록 조회
+export const getDeliveryRequests = async (): Promise<DeliveryRequest[]> => {
+  try {
+    const requestsRef = ref(realtimeDb, 'delivery-requests')
+    const snapshot = await get(requestsRef)
+    
+    if (snapshot.exists()) {
+      const requests = snapshot.val()
+      return Object.entries(requests)
+        .map(([key, request]: [string, any]) => ({
+          ...request,
+          id: key
+        }))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+    return []
+  } catch (error) {
+    console.error('배송 요청 목록 조회 에러:', error)
+    return []
+  }
+}
+
+// 특정 배송 요청 조회
+export const getDeliveryRequestById = async (requestId: string): Promise<DeliveryRequest | null> => {
+  try {
+    const requestRef = ref(realtimeDb, `delivery-requests/${requestId}`)
+    const snapshot = await get(requestRef)
+    
+    if (snapshot.exists()) {
+      return {
+        ...snapshot.val(),
+        id: requestId
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('배송 요청 조회 에러:', error)
+    return null
+  }
+}
+
+// 배송 요청 상태 업데이트
+export const updateDeliveryRequestStatus = async (requestId: string, status: DeliveryRequest['status']) => {
+  try {
+    const requestRef = ref(realtimeDb, `delivery-requests/${requestId}`)
+    await update(requestRef, {
+      status,
+      updatedAt: new Date().toISOString()
+    })
+    return { success: true }
+  } catch (error) {
+    console.error('배송 요청 상태 업데이트 에러:', error)
+    return { success: false, error }
+  }
+}
+
+// 실시간 배송 요청 목록 리스너
+export const listenToDeliveryRequests = (callback: (requests: DeliveryRequest[]) => void) => {
+  const requestsRef = ref(realtimeDb, 'delivery-requests')
+  
+  const unsubscribe = onValue(requestsRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const requests = Object.entries(snapshot.val())
+        .map(([key, request]: [string, any]) => ({
+          ...request,
+          id: key
+        }))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      callback(requests)
+    } else {
+      callback([])
+    }
+  })
+  
+  return unsubscribe
+}
+

@@ -3,44 +3,95 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Info, MessageSquareText, ShieldCheck, Eye, Printer, LockKeyhole } from "lucide-react"
+import { ArrowLeft, MessageSquareText, ShieldCheck, Eye, Printer, LockKeyhole } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { getDeliveryRequestById, updateDeliveryRequestStatus } from "@/lib/firebase-realtime"
+import { DeliveryRequest } from "@/lib/firebase-realtime"
 
 export default function ShippingDetailPage() {
-  // 샘플 주문 데이터
-  const orderInfo = {
-    id: "ORD-2024-001",
-    shoppingMall: "스마트 온라인몰",
-    requestDate: "2024-01-15",
-    totalAmount: "119,000원",
-    products: [
-      { name: "무선 이어폰", quantity: 1, price: "89,000원" },
-      { name: "핸드폰 케이스", quantity: 2, price: "30,000원" }
-    ],
-    specialRequest: "부재시 경비실 보관 요청",
-    deliveryMemo: "오후 2시 이후 배송 희망",
-    shippingStatus: "송장출력대기",
-    trackingNumber: "-",
-    estimatedDelivery: "-"
-  }
+  const [deliveryRequest, setDeliveryRequest] = useState<DeliveryRequest | null>(null)
+  const [personalInfo, setPersonalInfo] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const requestId = searchParams.get('id')
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case '송장출력대기':
-        return <Badge className="bg-yellow-100 text-yellow-800">송장출력대기</Badge>
-      case '배송준비중':
-        return <Badge className="bg-blue-100 text-blue-800">배송준비중</Badge>
-      case '배송중':
-        return <Badge className="bg-green-100 text-green-800">배송중</Badge>
-      case '배송완료':
-        return <Badge className="bg-green-100 text-green-800">배송완료</Badge>
-      case '결제완료':
-        return <Badge className="bg-purple-100 text-purple-800">결제완료</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
+  useEffect(() => {
+    if (requestId) {
+      loadDeliveryRequest(requestId)
+    }
+  }, [requestId])
+
+  const loadDeliveryRequest = async (id: string) => {
+    try {
+      const request = await getDeliveryRequestById(id)
+      setDeliveryRequest(request)
+    } catch (error) {
+      console.error('배송 요청 로드 에러:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
+
+  const handlePrintInvoice = async () => {
+    if (!deliveryRequest) return
+
+    try {
+      // 상태를 processing으로 변경
+      await updateDeliveryRequestStatus(deliveryRequest.id!, 'processing')
+      
+      // 실제 송장 출력 로직 (택배사 API 호출)
+      console.log('송장 출력 시작:', deliveryRequest.orderNumber)
+      
+      // 모의 처리 완료 (실제로는 택배사 API 응답 후)
+      setTimeout(async () => {
+        await updateDeliveryRequestStatus(deliveryRequest.id!, 'completed')
+        alert('송장 출력이 완료되었습니다.')
+      }, 2000)
+      
+    } catch (error) {
+      console.error('송장 출력 에러:', error)
+      alert('송장 출력에 실패했습니다.')
+    }
+  }
+
+  const handleViewPersonalInfo = async () => {
+    if (!deliveryRequest) return
+
+    try {
+      const response = await fetch('/api/verify-delivery-jwt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          jwt: deliveryRequest.ssdmJWT,
+          requiredFields: ['name', 'phone', 'address']
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPersonalInfo(data.personalInfo)
+      } else {
+        alert('개인정보 조회에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('개인정보 조회 에러:', error)
+      alert('개인정보 조회에 실패했습니다.')
+    }
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">로딩중...</div>
+  }
+
+  if (!deliveryRequest) {
+    return <div className="min-h-screen flex items-center justify-center">배송 요청을 찾을 수 없습니다.</div>
+  }
+
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'rgb(249, 250, 251)' }}>
@@ -67,11 +118,14 @@ export default function ShippingDetailPage() {
             <Button 
               className="text-white"
               style={{ backgroundColor: 'rgb(191, 80, 80)' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'rgb(168, 68, 68)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'rgb(191, 80, 80)'}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'rgb(168, 68, 68)'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'rgb(191, 80, 80)'}
+              onClick={handlePrintInvoice}
+              disabled={deliveryRequest.status === 'completed'}
             >
               <Printer className="w-4 h-4 mr-2" />
-              송장 출력
+              {deliveryRequest.status === 'pending' ? '송장 출력' : 
+               deliveryRequest.status === 'processing' ? '송장 출력중...' : '처리 완료'}
             </Button>
           </div>
         </div>
@@ -85,24 +139,31 @@ export default function ShippingDetailPage() {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-900">주문 정보</h2>
-                <Badge className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1">배송준비</Badge>
+                <Badge className={`text-sm px-3 py-1 ${
+                  deliveryRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  deliveryRequest.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {deliveryRequest.status === 'pending' ? '송장출력대기' :
+                   deliveryRequest.status === 'processing' ? '송장출력중' : '처리완료'}
+                </Badge>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-400">주문번호</p>
-                  <p className="font-medium text-gray-900">{orderInfo.id}</p>
+                  <p className="font-medium text-gray-900">{deliveryRequest.orderNumber}</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-400">쇼핑몰</p>
-                  <p className="font-medium text-gray-900">{orderInfo.shoppingMall}</p>
+                  <p className="font-medium text-gray-900">{deliveryRequest.mallName}</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-400">요청일시</p>
-                  <p className="font-medium text-gray-900">{orderInfo.requestDate}</p>
+                  <p className="font-medium text-gray-900">{new Date(deliveryRequest.requestDate).toLocaleString()}</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-400">총 금액</p>
-                  <p className="font-medium text-gray-900">{orderInfo.totalAmount}</p>
+                  <p className="font-medium text-gray-900">{deliveryRequest.totalAmount}</p>
                 </div>
               </div>
             </Card>
@@ -111,16 +172,16 @@ export default function ShippingDetailPage() {
             <Card className="p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">상품 목록</h2>
               <div className="space-y-4">
-                {orderInfo.products.map((product, index) => (
+                {deliveryRequest.items.map((item, index) => (
                   <div key={index}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-400">수량: {product.quantity}개</p>
+                        <p className="font-medium text-gray-900">{item.title}</p>
+                        <p className="text-sm text-gray-400">수량: {item.quantity}개</p>
                       </div>
-                      <span className="font-medium text-gray-900">{product.price}</span>
+                      <span className="font-medium text-gray-900">{item.price}</span>
                     </div>
-                    {index < orderInfo.products.length - 1 && (
+                    {index < deliveryRequest.items.length - 1 && (
                       <div className="border-t border-gray-200 mt-4"></div>
                     )}
                   </div>
@@ -138,7 +199,7 @@ export default function ShippingDetailPage() {
                   </div>
                   <span className="font-medium text-blue-600">배송 메모</span>
                 </div>
-                <p className="text-sm text-blue-600 mt-2">{orderInfo.deliveryMemo}</p>
+                <p className="text-sm text-blue-600 mt-2">{deliveryRequest.deliveryMemo}</p>
               </div>
             </Card>
           </div>
@@ -152,24 +213,38 @@ export default function ShippingDetailPage() {
                   <ShieldCheck className="w-5 h-5 text-green-500" />
                 </div>
               </div>
-              <div className="text-center space-y-4">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: 'rgb(255, 235, 235)' }}>
-                  <LockKeyhole className="w-10 h-10" style={{ color: 'rgb(191, 80, 80)' }} />
+              {personalInfo ? (
+                <div className="space-y-4">
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h3 className="font-medium text-green-800 mb-2">개인정보</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">이름:</span> {personalInfo.name}</div>
+                      <div><span className="font-medium">전화번호:</span> {personalInfo.phone}</div>
+                      <div><span className="font-medium">주소:</span> {personalInfo.address}</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-medium text-gray-900 mb-3">보안 뷰어 접근</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">개인정보 확인을 위해 SSDM 보안 뷰어를 활성화해주세요.</p>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: 'rgb(255, 235, 235)' }}>
+                    <LockKeyhole className="w-10 h-10" style={{ color: 'rgb(191, 80, 80)' }} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-medium text-gray-900 mb-3">보안 뷰어 접근</h3>
+                    <p className="text-sm text-gray-400 leading-relaxed">개인정보 확인을 위해 SSDM 보안 뷰어를 활성화해주세요.</p>
+                  </div>
+                  <Button 
+                    className="w-2/5 text-white py-4 text-base font-normal"
+                    style={{ backgroundColor: 'rgb(191, 80, 80)' }}
+                    onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'rgb(168, 68, 68)'}
+                    onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = 'rgb(191, 80, 80)'}
+                    onClick={handleViewPersonalInfo}
+                  >
+                    <Eye className="w-5 h-5 mr-2" />
+                    개인정보 확인
+                  </Button>
                 </div>
-                <Button 
-                  className="w-2/5 text-white py-4 text-base font-normal"
-                  style={{ backgroundColor: 'rgb(191, 80, 80)' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = 'rgb(168, 68, 68)'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'rgb(191, 80, 80)'}
-                >
-                  <Eye className="w-5 h-5 mr-2" />
-                  개인정보 확인
-                </Button>
-              </div>
+              )}
             </Card>
           </div>
         </div>
