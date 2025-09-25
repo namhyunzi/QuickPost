@@ -131,25 +131,14 @@ export default function ShippingDetailPage() {
             {/* 배송 메모 카드 */}
             <Card className="p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">배송 메모</h2>
-              <div className="space-y-3">
-                <div className="bg-red-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <Info className="w-5 h-5 text-red-500" />
-                    </div>
-                    <span className="font-medium text-red-600">특별 요청사항</span>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 flex items-center justify-center">
+                    <MessageSquareText className="w-5 h-5 text-blue-500" />
                   </div>
-                  <p className="text-sm text-red-600 mt-2">{orderInfo.specialRequest}</p>
+                  <span className="font-medium text-blue-600">배송 메모</span>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <MessageSquareText className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <span className="font-medium text-blue-600">배송 메모</span>
-                  </div>
-                  <p className="text-sm text-blue-600 mt-2">{orderInfo.deliveryMemo}</p>
-                </div>
+                <p className="text-sm text-blue-600 mt-2">{orderInfo.deliveryMemo}</p>
               </div>
             </Card>
           </div>
