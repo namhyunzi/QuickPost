@@ -66,8 +66,28 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('뷰어 세션 요청 에러:', error)
+    
+    // TypeScript unknown 타입 처리
+    const errorObj = error as Error
+    
+    // JWT 만료 에러 감지
+    if (errorObj.message && errorObj.message.includes('jwt expired')) {
+      return NextResponse.json(
+        { error: '주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.' },
+        { status: 403 }
+      )
+    }
+    
+    // JWT 검증 에러 감지
+    if (errorObj.message && (errorObj.message.includes('jwt') || errorObj.message.includes('token'))) {
+      return NextResponse.json(
+        { error: '주문 정보를 확인할 수 없습니다. 주문을 다시 확인해주세요.' },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: '뷰어 세션 요청 중 오류가 발생했습니다' },
+      { error: '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' },
       { status: 500 }
     )
   }
