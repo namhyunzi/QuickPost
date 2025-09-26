@@ -42,8 +42,8 @@ function DetailContent() {
       console.log('Firebase에서 조회한 세션 데이터:', sessionData)
       
       if (sessionData) {
-        const constructedUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`
-        console.log('환경변수 NEXT_PUBLIC_BASE_URL:', process.env.NEXT_PUBLIC_BASE_URL)
+        const constructedUrl = `${process.env.NEXT_PUBLIC_SSDM_URL}/secure-viewer?sessionId=${sessionData.sessionId}`
+        console.log('환경변수 NEXT_PUBLIC_SSDM_URL:', process.env.NEXT_PUBLIC_SSDM_URL)
         console.log('구성된 viewerUrl:', constructedUrl)
         
         // Firebase에서 세션 정보 조회
