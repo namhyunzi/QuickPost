@@ -163,7 +163,11 @@ function DetailContent() {
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-400">총 금액</p>
-                  <p className="font-medium text-gray-900">{deliveryRequest.totalAmount}</p>
+                  <p className="font-medium text-gray-900">
+                    {typeof deliveryRequest.totalAmount === 'number' 
+                      ? deliveryRequest.totalAmount.toLocaleString() + '원'
+                      : deliveryRequest.totalAmount}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -179,7 +183,14 @@ function DetailContent() {
                         <p className="font-medium text-gray-900">{item.title}</p>
                         <p className="text-sm text-gray-400">수량: {item.quantity}개</p>
                       </div>
-                      <span className="font-medium text-gray-900">{item.price}</span>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-400 line-through">
+                          {typeof item.price === 'number' ? item.price.toLocaleString() : item.price}원
+                        </div>
+                        <div className="font-medium text-gray-900">
+                          {typeof item.price === 'number' ? Math.floor(item.price * 0.9).toLocaleString() : item.price}원
+                        </div>
+                      </div>
                     </div>
                     {index < deliveryRequest.items.length - 1 && (
                       <div className="border-t border-gray-200 mt-4"></div>
