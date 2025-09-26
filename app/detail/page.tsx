@@ -142,7 +142,9 @@ function DetailContent() {
         } else if (response.status === 403) {
           alert('주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.')
         } else if (response.status >= 500) {
-          alert('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          // 서버에서 받은 구체적인 에러 메시지 표시
+          const errorData = await response.json()
+          alert(errorData.error || '개인정보 확인에 실패했습니다. 다시 시도해주세요.')
         } else {
           alert('개인정보 확인에 실패했습니다. 다시 시도해주세요.')
         }
