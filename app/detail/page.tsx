@@ -23,6 +23,15 @@ function DetailContent() {
     if (requestId) {
       loadDeliveryRequest(requestId)
     }
+    
+    // 저장된 세션 확인
+    const savedSession = localStorage.getItem('viewerSession')
+    
+    if (savedSession) {
+      const session = JSON.parse(savedSession)
+      // 세션이 있으면 뷰어 표시 (만료되면 SSDM이 알아서 만료 페이지 표시)
+      setViewerUrl(session.viewerUrl)
+    }
   }, [requestId])
 
   const loadDeliveryRequest = async (id: string) => {
@@ -38,6 +47,14 @@ function DetailContent() {
 
   const handlePrintInvoice = async () => {
     if (!deliveryRequest) return
+
+    // 저장된 세션 확인
+    const savedSession = localStorage.getItem('viewerSession')
+    
+    if (!savedSession) {
+      alert('개인정보 확인을 먼저 해주세요.')
+      return
+    }
 
     try {
       // 상태를 processing으로 변경
@@ -77,6 +94,13 @@ function DetailContent() {
       if (response.ok) {
         const data = await response.json()
         setViewerUrl(data.viewerUrl)
+        
+        // 세션 정보 저장
+        localStorage.setItem('viewerSession', JSON.stringify({
+          viewerUrl: data.viewerUrl,
+          sessionId: data.sessionId,
+          expiresAt: data.expiresAt
+        }))
       } else {
         alert('뷰어 세션 요청에 실패했습니다.')
       }
