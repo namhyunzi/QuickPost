@@ -181,7 +181,7 @@ function DetailContent() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'rgb(249, 250, 251)' }}>
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 no-print">
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
