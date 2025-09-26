@@ -127,11 +127,48 @@ function DetailContent() {
           remainingExtensions: 2
         })
       } else {
-        alert('뷰어 세션 요청에 실패했습니다.')
+        try {
+          const errorData = await response.json()
+          console.error('API 에러 응답:', errorData)
+        } catch (jsonError) {
+          console.error('JSON 파싱 에러:', jsonError)
+          const errorText = await response.text()
+          console.error('원본 응답:', errorText)
+        }
+        
+        // 사용자 친화적 에러 메시지
+        if (response.status === 401) {
+          alert('주문 정보를 확인할 수 없습니다. 주문을 다시 확인해주세요.')
+        } else if (response.status === 403) {
+          alert('주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.')
+        } else if (response.status >= 500) {
+          alert('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        } else {
+          alert('개인정보 확인에 실패했습니다. 다시 시도해주세요.')
+        }
       }
     } catch (error) {
       console.error('뷰어 세션 요청 에러:', error)
-      alert('뷰어 세션 요청에 실패했습니다.')
+      
+      // TypeScript unknown 타입 처리
+      const errorObj = error as Error
+      
+      // 네트워크 에러 등 예외 상황
+      if (errorObj.name === 'AbortError') {
+        alert('요청이 취소되었습니다. 다시 시도해주세요.')
+      } else if (errorObj.name === 'TypeError' && (
+        errorObj.message.includes('Failed to fetch') ||
+        errorObj.message.includes('NetworkError') ||
+        errorObj.message.includes('fetch') ||
+        errorObj.message.includes('network') ||
+        errorObj.message.includes('connection')
+      )) {
+        alert('인터넷 연결을 확인하고 다시 시도해주세요.')
+      } else if (errorObj.name === 'SyntaxError') {
+        alert('서버 응답을 처리할 수 없습니다. 잠시 후 다시 시도해주세요.')
+      } else {
+        alert('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      }
     }
   }
 
