@@ -10,6 +10,7 @@ import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getDeliveryRequestById, updateDeliveryRequestStatus } from "@/lib/firebase-realtime"
 import { DeliveryRequest } from "@/lib/firebase-realtime"
+import "@/styles/print.css"
 
 function DetailContent() {
   const [deliveryRequest, setDeliveryRequest] = useState<DeliveryRequest | null>(null)
@@ -321,7 +322,7 @@ function DetailContent() {
                       sandbox="allow-scripts allow-same-origin"
                       className="rounded-lg"
                     />
-                    <div className="flex justify-end mt-4">
+                    <div className="flex justify-end mt-4 no-print">
                       <Button 
                         onClick={handleExtendSession} 
                         variant="outline" 
