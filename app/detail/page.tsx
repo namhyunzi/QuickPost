@@ -14,6 +14,7 @@ import { DeliveryRequest } from "@/lib/firebase-realtime"
 function DetailContent() {
   const [deliveryRequest, setDeliveryRequest] = useState<DeliveryRequest | null>(null)
   const [personalInfo, setPersonalInfo] = useState<any>(null)
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const searchParams = useSearchParams()
   const requestId = searchParams.get('id')
@@ -61,26 +62,27 @@ function DetailContent() {
     if (!deliveryRequest) return
 
     try {
-      const response = await fetch('/api/verify-delivery-jwt', {
+      const response = await fetch('/api/ssdm/viewer-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           jwt: deliveryRequest.ssdmJWT,
-          requiredFields: ['name', 'phone', 'address']
+          requiredFields: ['name', 'phone', 'address', 'email'],
+          viewerType: 'delivery'
         })
       })
 
       if (response.ok) {
         const data = await response.json()
-        setPersonalInfo(data.personalInfo)
+        setViewerUrl(data.viewerUrl)
       } else {
-        alert('개인정보 조회에 실패했습니다.')
+        alert('뷰어 세션 요청에 실패했습니다.')
       }
     } catch (error) {
-      console.error('개인정보 조회 에러:', error)
-      alert('개인정보 조회에 실패했습니다.')
+      console.error('뷰어 세션 요청 에러:', error)
+      alert('뷰어 세션 요청에 실패했습니다.')
     }
   }
 
@@ -224,15 +226,18 @@ function DetailContent() {
                   <ShieldCheck className="w-5 h-5 text-green-500" />
                 </div>
               </div>
-              {personalInfo ? (
+              {viewerUrl ? (
                 <div className="space-y-4">
                   <div className="bg-green-50 rounded-lg p-4">
-                    <h3 className="font-medium text-green-800 mb-2">개인정보</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><span className="font-medium">이름:</span> {personalInfo.name}</div>
-                      <div><span className="font-medium">전화번호:</span> {personalInfo.phone}</div>
-                      <div><span className="font-medium">주소:</span> {personalInfo.address}</div>
-                    </div>
+                    <h3 className="font-medium text-green-800 mb-2">SSDM 보안뷰어</h3>
+                    <iframe 
+                      src={viewerUrl}
+                      width="100%" 
+                      height="400px"
+                      frameBorder="0"
+                      sandbox="allow-scripts allow-same-origin"
+                      className="rounded-lg"
+                    />
                   </div>
                 </div>
               ) : (
