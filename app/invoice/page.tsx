@@ -27,23 +27,12 @@ function InvoiceContent() {
   }, [requestId])
 
   const loadSessionData = async (id: string) => {
-    console.log('=== 송장 페이지 세션 데이터 로드 시작 ===')
-    console.log('주문 ID:', id)
-    
     try {
-      console.log('Firebase에서 세션 정보 조회 중...')
       const sessionData = await getDeliveryRequestSession(id)
-      console.log('Firebase 세션 데이터:', sessionData)
-      
       if (sessionData) {
-        const viewerUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`
-        console.log('생성된 viewerUrl:', viewerUrl)
-        
         // Firebase에서 세션 정보 조회하여 뷰어 표시
-        setViewerUrl(viewerUrl)
-        console.log('송장 페이지 뷰어 설정 완료')
+        setViewerUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`)
       } else {
-        console.log('세션 데이터 없음 - detail 페이지로 리다이렉트')
         alert('개인정보 확인을 먼저 해주세요.')
         // detail 페이지로 리다이렉트
         window.location.href = `/detail?id=${id}`

@@ -524,23 +524,15 @@ export const updateDeliveryRequestSession = async (requestId: string, sessionDat
   extensionCount?: number
   remainingExtensions?: number
 }) => {
-  console.log('=== Firebase 세션 업데이트 시작 ===')
-  console.log('requestId:', requestId)
-  console.log('sessionData:', sessionData)
-  
   try {
     const requestRef = ref(realtimeDb, `delivery-requests/${requestId}`)
-    const updateData = {
+    await update(requestRef, {
       sessionId: sessionData.sessionId,
       sessionExpiresAt: sessionData.sessionExpiresAt,
       extensionCount: sessionData.extensionCount || 0,
       remainingExtensions: sessionData.remainingExtensions || 2,
       updatedAt: new Date().toISOString()
-    }
-    console.log('Firebase 업데이트 데이터:', updateData)
-    
-    await update(requestRef, updateData)
-    console.log('Firebase 세션 업데이트 성공')
+    })
     return { success: true }
   } catch (error) {
     console.error('배송 요청 세션 업데이트 에러:', error)
@@ -550,25 +542,16 @@ export const updateDeliveryRequestSession = async (requestId: string, sessionDat
 
 // 배송 요청 세션 정보 조회
 export const getDeliveryRequestSession = async (requestId: string) => {
-  console.log('=== Firebase 세션 조회 시작 ===')
-  console.log('requestId:', requestId)
-  
   try {
-    console.log('Firebase에서 주문 데이터 조회 중...')
     const request = await getDeliveryRequestById(requestId)
-    console.log('주문 데이터:', request)
-    
     if (request && request.sessionId) {
-      const sessionData = {
+      return {
         sessionId: request.sessionId,
         sessionExpiresAt: request.sessionExpiresAt,
         extensionCount: request.extensionCount || 0,
         remainingExtensions: request.remainingExtensions || 2
       }
-      console.log('세션 데이터 반환:', sessionData)
-      return sessionData
     }
-    console.log('세션 데이터 없음')
     return null
   } catch (error) {
     console.error('배송 요청 세션 조회 에러:', error)

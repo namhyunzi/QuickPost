@@ -33,28 +33,16 @@ function DetailContent() {
   }, [requestId])
 
   const loadSessionData = async (id: string) => {
-    console.log('=== 세션 데이터 로드 시작 ===')
-    console.log('주문 ID:', id)
-    
     try {
-      console.log('Firebase에서 세션 정보 조회 중...')
       const sessionData = await getDeliveryRequestSession(id)
-      console.log('Firebase 세션 데이터:', sessionData)
-      
       if (sessionData) {
-        const viewerUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`
-        console.log('생성된 viewerUrl:', viewerUrl)
-        
         // Firebase에서 세션 정보 조회
-        setViewerUrl(viewerUrl)
+        setViewerUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`)
         setSessionState({
           sessionId: sessionData.sessionId,
           extensionCount: sessionData.extensionCount,
           remainingExtensions: sessionData.remainingExtensions
         })
-        console.log('세션 상태 설정 완료')
-      } else {
-        console.log('세션 데이터 없음 - 개인정보 확인 필요')
       }
     } catch (error) {
       console.error('세션 데이터 로드 에러:', error)
@@ -90,12 +78,7 @@ function DetailContent() {
   const handleViewPersonalInfo = async () => {
     if (!deliveryRequest) return
 
-    console.log('=== 개인정보 확인 요청 시작 ===')
-    console.log('requestId:', requestId)
-    console.log('deliveryRequest.ssdmJWT:', deliveryRequest.ssdmJWT ? '존재함' : '없음')
-
     try {
-      console.log('내부 API 호출: /api/ssdm/viewer-session')
       const response = await fetch('/api/ssdm/viewer-session', {
         method: 'POST',
         headers: {
@@ -108,23 +91,18 @@ function DetailContent() {
         })
       })
 
-      console.log('API 응답 상태:', response.status, response.statusText)
-
       if (response.ok) {
         const data = await response.json()
-        console.log('API 응답 데이터:', data)
         setViewerUrl(data.viewerUrl)
         
         // Firebase에 세션 정보 저장
         if (requestId) {
-          console.log('Firebase에 세션 정보 저장 시작')
-          const firebaseResult = await updateDeliveryRequestSession(requestId, {
+          await updateDeliveryRequestSession(requestId, {
             sessionId: data.sessionId,
             sessionExpiresAt: data.expiresAt,
             extensionCount: 0,
             remainingExtensions: 2
           })
-          console.log('Firebase 저장 결과:', firebaseResult)
         }
         
         // 세션 상태 업데이트
@@ -133,10 +111,7 @@ function DetailContent() {
           extensionCount: 0,
           remainingExtensions: 2
         })
-        console.log('세션 상태 업데이트 완료')
       } else {
-        const errorData = await response.json()
-        console.error('API 에러 응답:', errorData)
         alert('뷰어 세션 요청에 실패했습니다.')
       }
     } catch (error) {
@@ -148,48 +123,35 @@ function DetailContent() {
   const handleExtendSession = async () => {
     if (!requestId) return
     
-    console.log('=== 세션 연장 요청 시작 ===')
-    console.log('requestId:', requestId)
-    
     // Firebase에서 현재 세션 정보 조회
-    console.log('Firebase에서 현재 세션 정보 조회 중...')
     const sessionData = await getDeliveryRequestSession(requestId)
-    console.log('현재 세션 데이터:', sessionData)
-    
     if (!sessionData) {
-      console.log('세션 정보 없음')
       alert('세션 정보를 찾을 수 없습니다.')
       return
     }
     
     try {
-      console.log('세션 연장 API 호출:', sessionData.sessionId)
       const response = await fetch('/api/ssdm/extend-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: sessionData.sessionId })
       })
       
-      console.log('연장 API 응답 상태:', response.status, response.statusText)
       const result = await response.json()
-      console.log('연장 API 응답 데이터:', result)
       
       if (!response.ok) {
-        console.error('연장 API 에러:', result.error)
         alert(result.error)  // SSDM에서 받은 에러 메시지 표시
         return
       }
       
       if (result.success) {
-        console.log('Firebase에 업데이트된 세션 정보 저장 시작')
         // Firebase에 업데이트된 세션 정보 저장
-        const firebaseResult = await updateDeliveryRequestSession(requestId, {
+        await updateDeliveryRequestSession(requestId, {
           sessionId: result.sessionId,
           sessionExpiresAt: result.newExpiresAt,
           extensionCount: result.extensionCount,
           remainingExtensions: result.remainingExtensions
         })
-        console.log('Firebase 업데이트 결과:', firebaseResult)
         
         setSessionState(prev => ({
           ...prev,
@@ -197,14 +159,11 @@ function DetailContent() {
           remainingExtensions: result.remainingExtensions
         }))
         
-        console.log('세션 상태 업데이트 완료')
         alert(result.message)
       } else {
-        console.error('연장 실패:', result.error)
         alert(result.error)  // SSDM에서 받은 구체적인 에러 메시지
       }
     } catch (error) {
-      console.error('세션 연장 에러:', error)
       alert('세션 연장에 실패했습니다.')
     }
   }
