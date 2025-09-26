@@ -45,10 +45,19 @@ export async function POST(request: NextRequest) {
     if (!ssdmResponse.ok) {
       const errorText = await ssdmResponse.text()
       console.error('SSDM 서버 에러 응답:', errorText)
-      return NextResponse.json(
-        { error: 'SSDM 뷰어 세션 요청 실패' },
-        { status: ssdmResponse.status }
-      )
+      
+      // 상태 코드에 따라 사용자 친화적으로 변환
+      if (ssdmResponse.status === 401) {
+        return NextResponse.json(
+          { error: '주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.' },
+          { status: 401 }
+        )
+      } else {
+        return NextResponse.json(
+          { error: '개인정보 확인에 실패했습니다. 다시 시도해주세요.' },
+          { status: ssdmResponse.status }
+        )
+      }
     }
     
     const viewerData = await ssdmResponse.json()
