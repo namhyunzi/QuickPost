@@ -33,16 +33,31 @@ function DetailContent() {
   }, [requestId])
 
   const loadSessionData = async (id: string) => {
+    console.log('=== detail 페이지 세션 데이터 로드 시작 ===')
+    console.log('주문 ID:', id)
+    
     try {
+      console.log('Firebase에서 세션 정보 조회 중...')
       const sessionData = await getDeliveryRequestSession(id)
+      console.log('Firebase에서 조회한 세션 데이터:', sessionData)
+      
       if (sessionData) {
+        const constructedUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`
+        console.log('환경변수 NEXT_PUBLIC_BASE_URL:', process.env.NEXT_PUBLIC_BASE_URL)
+        console.log('구성된 viewerUrl:', constructedUrl)
+        
         // Firebase에서 세션 정보 조회
-        setViewerUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`)
+        setViewerUrl(constructedUrl)
+        console.log('setViewerUrl 호출 완료')
+        
         setSessionState({
           sessionId: sessionData.sessionId,
           extensionCount: sessionData.extensionCount,
           remainingExtensions: sessionData.remainingExtensions
         })
+        console.log('세션 상태 설정 완료')
+      } else {
+        console.log('세션 데이터 없음')
       }
     } catch (error) {
       console.error('세션 데이터 로드 에러:', error)
