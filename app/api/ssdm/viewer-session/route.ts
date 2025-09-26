@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const errorObj = error as Error
     
     // JWT 만료 오류 구분
-    if (errorObj.name === 'TokenExpiredError') {
+    if (errorObj.message && errorObj.message.includes('jwt expired')) {
       return NextResponse.json(
         { error: '주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.' },
         { status: 401 }
