@@ -8,7 +8,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { getDeliveryRequestById, updateDeliveryRequestStatus } from "@/lib/firebase-realtime"
+import { getDeliveryRequestById, updateDeliveryRequestStatus, updateDeliveryRequestSession, getDeliveryRequestSession } from "@/lib/firebase-realtime"
 import { DeliveryRequest } from "@/lib/firebase-realtime"
 import "@/styles/print.css"
 
@@ -28,24 +28,26 @@ function DetailContent() {
   useEffect(() => {
     if (requestId) {
       loadDeliveryRequest(requestId)
-    }
-    
-    // 저장된 세션 확인
-    const savedSession = localStorage.getItem('viewerSession')
-    
-    if (savedSession) {
-      const session = JSON.parse(savedSession)
-      // 세션이 있으면 뷰어 표시 (만료되면 SSDM이 알아서 만료 페이지 표시)
-      setViewerUrl(session.viewerUrl)
-      
-      // 세션 상태 복원
-      setSessionState({
-        sessionId: session.sessionId,
-        extensionCount: session.extensionCount || 0,
-        remainingExtensions: session.remainingExtensions || 2
-      })
+      loadSessionData(requestId)
     }
   }, [requestId])
+
+  const loadSessionData = async (id: string) => {
+    try {
+      const sessionData = await getDeliveryRequestSession(id)
+      if (sessionData) {
+        // Firebase에서 세션 정보 조회
+        setViewerUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`)
+        setSessionState({
+          sessionId: sessionData.sessionId,
+          extensionCount: sessionData.extensionCount,
+          remainingExtensions: sessionData.remainingExtensions
+        })
+      }
+    } catch (error) {
+      console.error('세션 데이터 로드 에러:', error)
+    }
+  }
 
   const loadDeliveryRequest = async (id: string) => {
     try {
@@ -59,12 +61,12 @@ function DetailContent() {
   }
 
   const handlePrintInvoice = async () => {
-    if (!deliveryRequest) return
+    if (!deliveryRequest || !requestId) return
 
-    // 저장된 세션 확인
-    const savedSession = localStorage.getItem('viewerSession')
+    // Firebase에서 세션 확인
+    const sessionData = await getDeliveryRequestSession(requestId)
     
-    if (!savedSession) {
+    if (!sessionData) {
       alert('개인정보 확인을 먼저 해주세요.')
       return
     }
@@ -93,14 +95,15 @@ function DetailContent() {
         const data = await response.json()
         setViewerUrl(data.viewerUrl)
         
-        // 세션 정보 저장
-        localStorage.setItem('viewerSession', JSON.stringify({
-          viewerUrl: data.viewerUrl,
-          sessionId: data.sessionId,
-          expiresAt: data.expiresAt,
-          extensionCount: 0,
-          remainingExtensions: 2
-        }))
+        // Firebase에 세션 정보 저장
+        if (requestId) {
+          await updateDeliveryRequestSession(requestId, {
+            sessionId: data.sessionId,
+            sessionExpiresAt: data.expiresAt,
+            extensionCount: 0,
+            remainingExtensions: 2
+          })
+        }
         
         // 세션 상태 업데이트
         setSessionState({
@@ -118,16 +121,12 @@ function DetailContent() {
   }
 
   const handleExtendSession = async () => {
-    const savedSession = localStorage.getItem('viewerSession')
-    if (!savedSession) return
+    if (!requestId) return
     
-    const session = JSON.parse(savedSession)
-    
-    // URL에서 sessionId 추출
-    const sessionId = session.viewerUrl.split('sessionId=')[1]?.split('&')[0]
-    
-    if (!sessionId) {
-      alert('sessionId를 찾을 수 없습니다.')
+    // Firebase에서 현재 세션 정보 조회
+    const sessionData = await getDeliveryRequestSession(requestId)
+    if (!sessionData) {
+      alert('세션 정보를 찾을 수 없습니다.')
       return
     }
     
@@ -135,7 +134,7 @@ function DetailContent() {
       const response = await fetch('/api/ssdm/extend-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ sessionId: sessionData.sessionId })
       })
       
       const result = await response.json()
@@ -146,15 +145,14 @@ function DetailContent() {
       }
       
       if (result.success) {
-        // SSDM에서 받은 새로운 만료 시간으로 업데이트
-        const updatedSession = {
-          ...session,
-          expiresAt: result.newExpiresAt,
+        // Firebase에 업데이트된 세션 정보 저장
+        await updateDeliveryRequestSession(requestId, {
+          sessionId: result.sessionId,
+          sessionExpiresAt: result.newExpiresAt,
           extensionCount: result.extensionCount,
           remainingExtensions: result.remainingExtensions
-        }
+        })
         
-        localStorage.setItem('viewerSession', JSON.stringify(updatedSession))
         setSessionState(prev => ({
           ...prev,
           extensionCount: result.extensionCount,

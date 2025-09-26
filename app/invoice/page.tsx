@@ -8,7 +8,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { getDeliveryRequestById } from "@/lib/firebase-realtime"
+import { getDeliveryRequestById, getDeliveryRequestSession } from "@/lib/firebase-realtime"
 import { DeliveryRequest } from "@/lib/firebase-realtime"
 import "@/styles/print.css"
 
@@ -22,22 +22,27 @@ function InvoiceContent() {
   useEffect(() => {
     if (requestId) {
       loadDeliveryRequest(requestId)
+      loadSessionData(requestId)
     }
-    
-    // 저장된 세션 확인
-    const savedSession = localStorage.getItem('viewerSession')
-    
-    if (!savedSession) {
-      alert('개인정보 확인을 먼저 해주세요.')
-      // detail 페이지로 리다이렉트
-      window.location.href = `/detail?id=${requestId}`
-      return
-    }
-    
-    // 세션이 있으면 뷰어 표시
-    const session = JSON.parse(savedSession)
-    setViewerUrl(session.viewerUrl)
   }, [requestId])
+
+  const loadSessionData = async (id: string) => {
+    try {
+      const sessionData = await getDeliveryRequestSession(id)
+      if (sessionData) {
+        // Firebase에서 세션 정보 조회하여 뷰어 표시
+        setViewerUrl(`${process.env.NEXT_PUBLIC_BASE_URL}/secure-viewer?sessionId=${sessionData.sessionId}`)
+      } else {
+        alert('개인정보 확인을 먼저 해주세요.')
+        // detail 페이지로 리다이렉트
+        window.location.href = `/detail?id=${id}`
+      }
+    } catch (error) {
+      console.error('세션 데이터 로드 에러:', error)
+      alert('개인정보 확인을 먼저 해주세요.')
+      window.location.href = `/detail?id=${id}`
+    }
+  }
 
   const loadDeliveryRequest = async (id: string) => {
     try {

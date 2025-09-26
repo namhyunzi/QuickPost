@@ -432,6 +432,11 @@ export interface DeliveryRequest {
   status: 'pending' | 'processing' | 'completed'
   createdAt: string
   updatedAt: string
+  // SSDM 세션 관련 필드
+  sessionId?: string
+  sessionExpiresAt?: string
+  extensionCount?: number
+  remainingExtensions?: number
 }
 
 // 배송 요청 생성
@@ -509,6 +514,48 @@ export const updateDeliveryRequestStatus = async (requestId: string, status: Del
   } catch (error) {
     console.error('배송 요청 상태 업데이트 에러:', error)
     return { success: false, error }
+  }
+}
+
+// 배송 요청 세션 정보 업데이트
+export const updateDeliveryRequestSession = async (requestId: string, sessionData: {
+  sessionId: string
+  sessionExpiresAt: string
+  extensionCount?: number
+  remainingExtensions?: number
+}) => {
+  try {
+    const requestRef = ref(realtimeDb, `delivery-requests/${requestId}`)
+    await update(requestRef, {
+      sessionId: sessionData.sessionId,
+      sessionExpiresAt: sessionData.sessionExpiresAt,
+      extensionCount: sessionData.extensionCount || 0,
+      remainingExtensions: sessionData.remainingExtensions || 2,
+      updatedAt: new Date().toISOString()
+    })
+    return { success: true }
+  } catch (error) {
+    console.error('배송 요청 세션 업데이트 에러:', error)
+    return { success: false, error }
+  }
+}
+
+// 배송 요청 세션 정보 조회
+export const getDeliveryRequestSession = async (requestId: string) => {
+  try {
+    const request = await getDeliveryRequestById(requestId)
+    if (request && request.sessionId) {
+      return {
+        sessionId: request.sessionId,
+        sessionExpiresAt: request.sessionExpiresAt,
+        extensionCount: request.extensionCount || 0,
+        remainingExtensions: request.remainingExtensions || 2
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('배송 요청 세션 조회 에러:', error)
+    return null
   }
 }
 

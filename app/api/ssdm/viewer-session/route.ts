@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       viewerUrl: viewerData.viewerUrl,
-      sessionToken: viewerData.sessionToken,
-      expiresIn: viewerData.expiresIn
+      sessionId: viewerData.sessionId,
+      expiresAt: viewerData.expiresAt
     })
     
   } catch (error) {
