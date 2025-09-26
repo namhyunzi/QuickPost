@@ -122,11 +122,19 @@ function DetailContent() {
     
     const session = JSON.parse(savedSession)
     
+    // URL에서 sessionId 추출
+    const sessionId = session.viewerUrl.split('sessionId=')[1]?.split('&')[0]
+    
+    if (!sessionId) {
+      alert('sessionId를 찾을 수 없습니다.')
+      return
+    }
+    
     try {
       const response = await fetch('/api/ssdm/extend-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.sessionId })
+        body: JSON.stringify({ sessionId })
       })
       
       const result = await response.json()
