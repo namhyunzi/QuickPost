@@ -68,8 +68,8 @@ function DetailContent() {
       return
     }
 
-    // 송장 페이지 새 창으로 열기
-    window.open(`/invoice?id=${requestId}`, '_blank')
+    // 현재 페이지 인쇄
+    window.print()
   }
 
   const handleViewPersonalInfo = async () => {
