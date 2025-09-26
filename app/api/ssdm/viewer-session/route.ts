@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const { jwt, requiredFields, viewerType } = await request.json()
     console.log('받은 요청 데이터:', { 
-      jwt: jwt ? '존재함' : '없음', 
+      jwt: jwt, 
       requiredFields, 
       viewerType 
     })
