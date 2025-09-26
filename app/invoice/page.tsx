@@ -10,6 +10,7 @@ import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getDeliveryRequestById } from "@/lib/firebase-realtime"
 import { DeliveryRequest } from "@/lib/firebase-realtime"
+import "@/styles/print.css"
 
 function InvoiceContent() {
   const [deliveryRequest, setDeliveryRequest] = useState<DeliveryRequest | null>(null)
@@ -58,7 +59,14 @@ function InvoiceContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-8">
+    <div className="min-h-screen bg-white p-8 invoice-page">
+      {/* 인쇄 버튼 */}
+      <div className="no-print mb-4">
+        <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white">
+          인쇄하기
+        </Button>
+      </div>
+      
       <div className="max-w-4xl mx-auto">
         {/* QuickPost 로고 및 배송 송장 헤더 */}
         <div className="flex items-center justify-between mb-8 border-b-2 border-gray-300 pb-4">

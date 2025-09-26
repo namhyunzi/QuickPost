@@ -16,6 +16,11 @@ function DetailContent() {
   const [personalInfo, setPersonalInfo] = useState<any>(null)
   const [viewerUrl, setViewerUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionState, setSessionState] = useState({
+    sessionId: null,
+    extensionCount: 0,
+    remainingExtensions: 2
+  })
   const searchParams = useSearchParams()
   const requestId = searchParams.get('id')
 
@@ -31,6 +36,13 @@ function DetailContent() {
       const session = JSON.parse(savedSession)
       // 세션이 있으면 뷰어 표시 (만료되면 SSDM이 알아서 만료 페이지 표시)
       setViewerUrl(session.viewerUrl)
+      
+      // 세션 상태 복원
+      setSessionState({
+        sessionId: session.sessionId,
+        extensionCount: session.extensionCount || 0,
+        remainingExtensions: session.remainingExtensions || 2
+      })
     }
   }, [requestId])
 
@@ -56,23 +68,8 @@ function DetailContent() {
       return
     }
 
-    try {
-      // 상태를 processing으로 변경
-      await updateDeliveryRequestStatus(deliveryRequest.id!, 'processing')
-      
-      // 실제 송장 출력 로직 (택배사 API 호출)
-      console.log('송장 출력 시작:', deliveryRequest.orderNumber)
-      
-      // 모의 처리 완료 (실제로는 택배사 API 응답 후)
-      setTimeout(async () => {
-        await updateDeliveryRequestStatus(deliveryRequest.id!, 'completed')
-        alert('송장 출력이 완료되었습니다.')
-      }, 2000)
-      
-    } catch (error) {
-      console.error('송장 출력 에러:', error)
-      alert('송장 출력에 실패했습니다.')
-    }
+    // 송장 페이지 새 창으로 열기
+    window.open(`/invoice?id=${requestId}`, '_blank')
   }
 
   const handleViewPersonalInfo = async () => {
@@ -99,14 +96,68 @@ function DetailContent() {
         localStorage.setItem('viewerSession', JSON.stringify({
           viewerUrl: data.viewerUrl,
           sessionId: data.sessionId,
-          expiresAt: data.expiresAt
+          expiresAt: data.expiresAt,
+          extensionCount: 0,
+          remainingExtensions: 2
         }))
+        
+        // 세션 상태 업데이트
+        setSessionState({
+          sessionId: data.sessionId,
+          extensionCount: 0,
+          remainingExtensions: 2
+        })
       } else {
         alert('뷰어 세션 요청에 실패했습니다.')
       }
     } catch (error) {
       console.error('뷰어 세션 요청 에러:', error)
       alert('뷰어 세션 요청에 실패했습니다.')
+    }
+  }
+
+  const handleExtendSession = async () => {
+    const savedSession = localStorage.getItem('viewerSession')
+    if (!savedSession) return
+    
+    const session = JSON.parse(savedSession)
+    
+    try {
+      const response = await fetch('/api/ssdm/extend-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.sessionId })
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        alert(result.error)  // 구체적인 에러 메시지 표시
+        return
+      }
+      
+      if (result.success) {
+        // SSDM에서 받은 새로운 만료 시간으로 업데이트
+        const updatedSession = {
+          ...session,
+          expiresAt: result.newExpiresAt,
+          extensionCount: result.extensionCount,
+          remainingExtensions: result.remainingExtensions
+        }
+        
+        localStorage.setItem('viewerSession', JSON.stringify(updatedSession))
+        setSessionState(prev => ({
+          ...prev,
+          extensionCount: result.extensionCount,
+          remainingExtensions: result.remainingExtensions
+        }))
+        
+        alert(result.message)
+      } else {
+        alert(result.error)  // SSDM에서 받은 구체적인 에러 메시지
+      }
+    } catch (error) {
+      alert('세션 연장에 실패했습니다.')
     }
   }
 
@@ -262,6 +313,14 @@ function DetailContent() {
                       sandbox="allow-scripts allow-same-origin"
                       className="rounded-lg"
                     />
+                    <Button 
+                      onClick={handleExtendSession} 
+                      variant="outline" 
+                      className="mt-4"
+                      disabled={sessionState.remainingExtensions <= 0}
+                    >
+                      12시간 연장 ({sessionState.extensionCount}/2) - {sessionState.remainingExtensions}번 남음
+                    </Button>
                   </div>
                 </div>
               ) : (
