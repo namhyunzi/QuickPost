@@ -13,11 +13,13 @@ export async function POST(request: NextRequest) {
     
     // SSDM 서버로 연장 요청
     const ssdmResponse = await fetch(`${process.env.SSDM_API_URL}/api/extend-session`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sessionId}`,
-        'Content-Type': 'application/json'
-      }
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionId: sessionId  // body로 전달
+        })
     })
     
     if (!ssdmResponse.ok) {
