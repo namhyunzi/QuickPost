@@ -140,7 +140,7 @@ function DetailContent() {
       const result = await response.json()
       
       if (!response.ok) {
-        alert(result.error)  // 구체적인 에러 메시지 표시
+        alert(result.error)  // SSDM에서 받은 에러 메시지 표시
         return
       }
       
@@ -321,14 +321,15 @@ function DetailContent() {
                       sandbox="allow-scripts allow-same-origin"
                       className="rounded-lg"
                     />
-                    <Button 
-                      onClick={handleExtendSession} 
-                      variant="outline" 
-                      className="mt-4"
-                      disabled={sessionState.remainingExtensions <= 0}
-                    >
-                      12시간 연장 ({sessionState.extensionCount}/2) - {sessionState.remainingExtensions}번 남음
-                    </Button>
+                    <div className="flex justify-end mt-4">
+                      <Button 
+                        onClick={handleExtendSession} 
+                        variant="outline" 
+                        disabled={sessionState.remainingExtensions <= 0}
+                      >
+                        12시간 연장 ({sessionState.extensionCount}/2)
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (

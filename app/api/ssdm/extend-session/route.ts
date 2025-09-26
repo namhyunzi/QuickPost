@@ -36,11 +36,11 @@ export async function POST(request: NextRequest) {
     console.log('SSDM 응답 상태:', ssdmResponse.status, ssdmResponse.statusText)
     
     if (!ssdmResponse.ok) {
-      const errorText = await ssdmResponse.text()
-      console.log('SSDM 에러 응답:', errorText)
+      const errorData = await ssdmResponse.json()
+      console.log('SSDM 에러 응답:', errorData)
       
       return NextResponse.json(
-        { error: `SSDM 세션 연장 요청 실패 (${ssdmResponse.status}): ${errorText}` },
+        { error: errorData.error || 'SSDM 세션 연장 요청 실패' },
         { status: ssdmResponse.status }
       )
     }
