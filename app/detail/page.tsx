@@ -127,27 +127,27 @@ function DetailContent() {
           remainingExtensions: 2
         })
       } else {
+        // 에러 응답 처리 (한 번만 json() 호출)
+        let errorMessage = '개인정보 확인에 실패했습니다. 다시 시도해주세요.'
+        
         try {
           const errorData = await response.json()
           console.error('API 에러 응답:', errorData)
+          errorMessage = errorData.error || errorMessage
         } catch (jsonError) {
           console.error('JSON 파싱 에러:', jsonError)
           const errorText = await response.text()
           console.error('원본 응답:', errorText)
         }
         
-        // 사용자 친화적 에러 메시지
+        // 상태 코드에 따른 메시지 조정
         if (response.status === 401) {
-          alert('주문 정보를 확인할 수 없습니다. 주문을 다시 확인해주세요.')
+          errorMessage = '주문 정보를 확인할 수 없습니다. 주문을 다시 확인해주세요.'
         } else if (response.status === 403) {
-          alert('주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.')
-        } else if (response.status >= 500) {
-          // 서버에서 받은 구체적인 에러 메시지 표시
-          const errorData = await response.json()
-          alert(errorData.error || '개인정보 확인에 실패했습니다. 다시 시도해주세요.')
-        } else {
-          alert('개인정보 확인에 실패했습니다. 다시 시도해주세요.')
+          errorMessage = '주문 정보가 만료되었습니다. 새로고침 후 다시 시도해주세요.'
         }
+        
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('뷰어 세션 요청 에러:', error)
