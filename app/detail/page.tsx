@@ -371,7 +371,7 @@ function DetailContent() {
                       width="100%" 
                       height="400px"
                       frameBorder="0"
-                      sandbox="allow-scripts allow-same-origin"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
                       className="rounded-lg"
                     />
                     <div className="flex justify-end mt-4 no-print">
